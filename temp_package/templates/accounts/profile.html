@@ -1,0 +1,120 @@
+{% extends 'base.html' %}
+
+{% block title %}个人中心 - 财务管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">个人中心</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body text-center">
+                <img src="{% static 'images/default-avatar.png' %}" class="rounded-circle mb-3" width="120" height="120">
+                <h5 class="card-title">{{ request.user.username }}</h5>
+                <p class="text-muted">{{ request.user.get_role_display }}</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                个人信息
+            </div>
+            <div class="card-body">
+                <form id="profileForm">
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label">用户名</label>
+                        <div class="col-sm-9">
+                            <input type="text" readonly class="form-control-plaintext" value="{{ request.user.username }}">
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label">邮箱</label>
+                        <div class="col-sm-9">
+                            <input type="email" class="form-control" value="{{ request.user.email }}" name="email">
+                        </div>
+                    </div>
+                    <div class="mb-3 row">
+                        <label class="col-sm-3 col-form-label">手机号</label>
+                        <div class="col-sm-9">
+                            <input type="tel" class="form-control" value="{{ request.user.phone }}" name="phone">
+                        </div>
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">保存更改</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header">
+                修改密码
+            </div>
+            <div class="card-body">
+                <form id="passwordForm">
+                    <div class="mb-3">
+                        <label class="form-label">当前密码</label>
+                        <input type="password" class="form-control" name="current_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">新密码</label>
+                        <input type="password" class="form-control" name="new_password" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">确认新密码</label>
+                        <input type="password" class="form-control" name="confirm_password" required>
+                    </div>
+                    <div class="text-end">
+                        <button type="submit" class="btn btn-primary">修改密码</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+// 提交个人信息表单
+$('#profileForm').on('submit', function(e) {
+    e.preventDefault();
+    const formData = $(this).serialize();
+    
+    $.ajax({
+        url: '/api/users/' + {{ request.user.id }} + '/',
+        method: 'PATCH',
+        data: formData,
+        success: function(response) {
+            alert('个人信息更新成功');
+        },
+        error: function(xhr) {
+            alert('更新失败: ' + xhr.responseJSON.detail);
+        }
+    });
+});
+
+// 提交密码修改表单
+$('#passwordForm').on('submit', function(e) {
+    e.preventDefault();
+    const formData = $(this).serialize();
+    
+    $.ajax({
+        url: '/api/users/' + {{ request.user.id }} + '/change_password/',
+        method: 'POST',
+        data: formData,
+        success: function(response) {
+            alert('密码修改成功');
+            $('#passwordForm')[0].reset();
+        },
+        error: function(xhr) {
+            alert('修改失败: ' + xhr.responseJSON.detail);
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

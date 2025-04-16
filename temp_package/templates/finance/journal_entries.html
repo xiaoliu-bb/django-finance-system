@@ -1,0 +1,175 @@
+{% extends 'base.html' %}
+
+{% block title %}账务管理 - 财务管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">账务管理</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="exportBtn">导出</button>
+            <a href="{% url 'finance:journal_entry_create' %}" class="btn btn-sm btn-primary">新增账务</a>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form id="filterForm" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">日期范围</label>
+                <div class="input-group">
+                    <input type="date" class="form-control" name="start_date">
+                    <span class="input-group-text">至</span>
+                    <input type="date" class="form-control" name="end_date">
+                </div>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">类型</label>
+                <select class="form-select" name="entry_type">
+                    <option value="">全部</option>
+                    <option value="income">收入</option>
+                    <option value="expense">支出</option>
+                    <option value="transfer">转账</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">状态</label>
+                <select class="form-select" name="status">
+                    <option value="">全部</option>
+                    <option value="draft">草稿</option>
+                    <option value="posted">已过账</option>
+                    <option value="reconciled">已对账</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">关键词</label>
+                <input type="text" class="form-control" name="search" placeholder="参考号/描述">
+            </div>
+            <div class="col-md-2 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">筛选</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-striped table-hover" id="journalTable">
+        <thead>
+            <tr>
+                <th>日期</th>
+                <th>参考号</th>
+                <th>类型</th>
+                <th>金额</th>
+                <th>状态</th>
+                <th>创建人</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- 数据将通过AJAX加载 -->
+        </tbody>
+    </table>
+    
+    <nav aria-label="Page navigation">
+        <ul class="pagination justify-content-center" id="pagination">
+            <!-- 分页将通过AJAX加载 -->
+        </ul>
+    </nav>
+</div>
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 加载账务数据
+    function loadJournalEntries(page = 1) {
+        const formData = $('#filterForm').serialize() + '&page=' + page;
+        
+        $.ajax({
+            url: '/api/journal-entries/',
+            data: formData,
+            success: function(response) {
+                // 渲染表格数据
+                const tbody = $('#journalTable tbody');
+                tbody.empty();
+                
+                response.results.forEach(entry => {
+                    tbody.append(`
+                        <tr>
+                            <td>${entry.entry_date}</td>
+                            <td>${entry.reference || '-'}</td>
+                            <td>${entry.get_entry_type_display}</td>
+                            <td>¥${entry.total_amount}</td>
+                            <td><span class="badge bg-${getStatusClass(entry.status)}">${entry.get_status_display}</span></td>
+                            <td>${entry.created_by.username}</td>
+                            <td>
+                                <a href="/finance/journal-entries/${entry.id}/" class="btn btn-sm btn-outline-info">查看</a>
+                                ${entry.status === 'draft' ? `<a href="/finance/journal-entries/${entry.id}/edit/" class="btn btn-sm btn-outline-warning">编辑</a>` : ''}
+                            </td>
+                        </tr>
+                    `);
+                });
+                
+                // 渲染分页
+                renderPagination(response);
+            }
+        });
+    }
+    
+    // 获取状态对应的样式类
+    function getStatusClass(status) {
+        const classes = {
+            'draft': 'secondary',
+            'posted': 'success',
+            'reconciled': 'primary'
+        };
+        return classes[status] || 'secondary';
+    }
+    
+    // 渲染分页控件
+    function renderPagination(response) {
+        const pagination = $('#pagination');
+        pagination.empty();
+        
+        if (response.previous) {
+            pagination.append(`<li class="page-item"><a class="page-link" href="#" data-page="${response.current_page - 1}">上一页</a></li>`);
+        }
+        
+        for (let i = 1; i <= response.total_pages; i++) {
+            pagination.append(`
+                <li class="page-item ${i === response.current_page ? 'active' : ''}">
+                    <a class="page-link" href="#" data-page="${i}">${i}</a>
+                </li>
+            `);
+        }
+        
+        if (response.next) {
+            pagination.append(`<li class="page-item"><a class="page-link" href="#" data-page="${response.current_page + 1}">下一页</a></li>`);
+        }
+    }
+    
+    // 初始化加载数据
+    loadJournalEntries();
+    
+    // 筛选表单提交
+    $('#filterForm').on('submit', function(e) {
+        e.preventDefault();
+        loadJournalEntries();
+    });
+    
+    // 分页点击事件
+    $(document).on('click', '.page-link', function(e) {
+        e.preventDefault();
+        const page = $(this).data('page');
+        loadJournalEntries(page);
+    });
+    
+    // 导出按钮点击事件
+    $('#exportBtn').on('click', function() {
+        const formData = $('#filterForm').serialize();
+        window.open('/api/journal-entries/export/?' + formData, '_blank');
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

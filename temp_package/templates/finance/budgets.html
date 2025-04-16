@@ -1,0 +1,181 @@
+{% extends 'base.html' %}
+
+{% block title %}预算管理 - 财务管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">预算管理</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <a href="{% url 'finance:budget_create' %}" class="btn btn-sm btn-primary">新增预算</a>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">年度预算</h5>
+                <h3 class="card-text">¥ {{ current_fiscal_year.budget_total|default:"0.00" }}</h3>
+                <p class="text-muted">{{ current_fiscal_year.year }}财年</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">已使用</h5>
+                <h3 class="card-text">¥ {{ current_fiscal_year.budget_used|default:"0.00" }}</h3>
+                <p class="text-muted">使用率 {{ current_fiscal_year.budget_usage_rate|default:"0" }}%</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">剩余预算</h5>
+                <h3 class="card-text text-success">¥ {{ current_fiscal_year.budget_remaining|default:"0.00" }}</h3>
+                <p class="text-muted">剩余天数 {{ current_fiscal_year.days_remaining }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+                <a class="nav-link active" href="#" data-bs-toggle="tab" data-bs-target="#currentBudget">当前财年</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#" data-bs-toggle="tab" data-bs-target="#historyBudget">历史预算</a>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content">
+            <div class="tab-pane fade show active" id="currentBudget">
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>预算名称</th>
+                                <th>预算金额</th>
+                                <th>已使用</th>
+                                <th>剩余</th>
+                                <th>使用率</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for budget in current_budgets %}
+                            <tr>
+                                <td>{{ budget.name }}</td>
+                                <td>¥{{ budget.total_amount }}</td>
+                                <td>¥{{ budget.used_amount }}</td>
+                                <td>¥{{ budget.remaining_amount }}</td>
+                                <td>
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-{{ budget.get_status_color }}" 
+                                             role="progressbar" 
+                                             style="width: {{ budget.usage_rate }}%" 
+                                             aria-valuenow="{{ budget.usage_rate }}" 
+                                             aria-valuemin="0" 
+                                             aria-valuemax="100">
+                                            {{ budget.usage_rate }}%
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-{{ budget.get_status_color }}">
+                                        {{ budget.get_status_display }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'finance:budget_detail' budget.id %}" class="btn btn-sm btn-outline-info">详情</a>
+                                    {% if budget.status == 'draft' %}
+                                    <a href="{% url 'finance:budget_edit' budget.id %}" class="btn btn-sm btn-outline-warning">编辑</a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="historyBudget">
+                <div class="table-responsive">
+                    <table class="table table-striped" id="historyBudgetTable">
+                        <thead>
+                            <tr>
+                                <th>财年</th>
+                                <th>预算名称</th>
+                                <th>预算金额</th>
+                                <th>实际支出</th>
+                                <th>偏差率</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- 历史预算数据将通过AJAX加载 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 加载历史预算数据
+    function loadHistoryBudgets() {
+        $.ajax({
+            url: '/api/budgets/',
+            data: {
+                fiscal_year__is_current: false,
+                ordering: '-fiscal_year__year'
+            },
+            success: function(response) {
+                const tbody = $('#historyBudgetTable tbody');
+                tbody.empty();
+                
+                response.results.forEach(budget => {
+                    tbody.append(`
+                        <tr>
+                            <td>${budget.fiscal_year.year}</td>
+                            <td>${budget.name}</td>
+                            <td>¥${budget.total_amount}</td>
+                            <td>¥${budget.actual_amount}</td>
+                            <td class="${budget.variance_rate >= 0 ? 'text-success' : 'text-danger'}">
+                                ${budget.variance_rate}%
+                            </td>
+                            <td>
+                                <span class="badge bg-${budget.status === 'approved' ? 'success' : 'secondary'}">
+                                    ${budget.status}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="/finance/budgets/${budget.id}/" class="btn btn-sm btn-outline-info">详情</a>
+                            </td>
+                        </tr>
+                    `);
+                });
+            }
+        });
+    }
+    
+    // 当切换到历史预算标签时加载数据
+    $('a[data-bs-target="#historyBudget"]').on('click', function() {
+        if ($('#historyBudgetTable tbody').is(':empty')) {
+            loadHistoryBudgets();
+        }
+    });
+});
+</script>
+{% endblock %}
+{% endblock %}

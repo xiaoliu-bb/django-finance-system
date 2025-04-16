@@ -1,0 +1,365 @@
+{% extends 'base.html' %}
+
+{% block title %}财务报表 - 财务管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">财务报表</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="exportExcelBtn">导出Excel</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="exportPdfBtn">导出PDF</button>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header">
+                <ul class="nav nav-tabs card-header-tabs" id="reportTabs">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="#balanceSheet" data-bs-toggle="tab">资产负债表</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#incomeStatement" data-bs-toggle="tab">利润表</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#cashFlow" data-bs-toggle="tab">现金流量表</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="card-body">
+                <div class="tab-content">
+                    <!-- 资产负债表 -->
+                    <div class="tab-pane fade show active" id="balanceSheet">
+                        <form class="row g-3 mb-4" id="balanceSheetForm">
+                            <div class="col-md-3">
+                                <label class="form-label">报表日期</label>
+                                <input type="date" class="form-control" name="report_date" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">比较日期</label>
+                                <input type="date" class="form-control" name="compare_date">
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary">生成报表</button>
+                            </div>
+                        </form>
+                        <div id="balanceSheetContent" class="table-responsive">
+                            <!-- 报表内容将通过AJAX加载 -->
+                        </div>
+                    </div>
+
+                    <!-- 利润表 -->
+                    <div class="tab-pane fade" id="incomeStatement">
+                        <form class="row g-3 mb-4" id="incomeStatementForm">
+                            <div class="col-md-3">
+                                <label class="form-label">开始日期</label>
+                                <input type="date" class="form-control" name="start_date" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">结束日期</label>
+                                <input type="date" class="form-control" name="end_date" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">比较期间</label>
+                                <select class="form-select" name="compare_period">
+                                    <option value="">无比较</option>
+                                    <option value="last_year">去年同期</option>
+                                    <option value="last_quarter">上季度</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary">生成报表</button>
+                            </div>
+                        </form>
+                        <div id="incomeStatementContent" class="table-responsive">
+                            <!-- 报表内容将通过AJAX加载 -->
+                        </div>
+                    </div>
+
+                    <!-- 现金流量表 -->
+                    <div class="tab-pane fade" id="cashFlow">
+                        <form class="row g-3 mb-4" id="cashFlowForm">
+                            <div class="col-md-3">
+                                <label class="form-label">开始日期</label>
+                                <input type="date" class="form-control" name="start_date" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">结束日期</label>
+                                <input type="date" class="form-control" name="end_date" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">显示方式</label>
+                                <select class="form-select" name="display_type">
+                                    <option value="summary">汇总</option>
+                                    <option value="detailed">明细</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="submit" class="btn btn-primary">生成报表</button>
+                            </div>
+                        </form>
+                        <div id="cashFlowContent" class="table-responsive">
+                            <!-- 报表内容将通过AJAX加载 -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        自定义报表
+    </div>
+    <div class="card-body">
+        <form id="customReportForm">
+            <div class="row mb-3">
+                <div class="col-md-4">
+                    <label class="form-label">报表名称</label>
+                    <input type="text" class="form-control" name="report_name" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">报表类型</label>
+                    <select class="form-select" name="report_type" required>
+                        <option value="">-- 选择报表类型 --</option>
+                        <option value="account_summary">科目汇总表</option>
+                        <option value="trial_balance">试算平衡表</option>
+                        <option value="aging_analysis">账龄分析表</option>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">日期范围</label>
+                    <div class="input-group">
+                        <input type="date" class="form-control" name="start_date" required>
+                        <span class="input-group-text">至</span>
+                        <input type="date" class="form-control" name="end_date" required>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">分组方式</label>
+                    <select class="form-select" name="group_by">
+                        <option value="account">按科目</option>
+                        <option value="month">按月</option>
+                        <option value="category">按分类</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">排序方式</label>
+                    <select class="form-select" name="order_by">
+                        <option value="code">按科目代码</option>
+                        <option value="name">按科目名称</option>
+                        <option value="amount">按金额</option>
+                    </select>
+                </div>
+            </div>
+            <div class="text-end">
+                <button type="submit" class="btn btn-primary">生成报表</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% block extra_js %}
+<script>
+$(document).ready(function() {
+    // 生成资产负债表
+    $('#balanceSheetForm').on('submit', function(e) {
+        e.preventDefault();
+        const formData = $(this).serialize();
+
+        $.ajax({
+            url: '/api/reports/balance-sheet/',
+            data: formData,
+            success: function(response) {
+                renderBalanceSheet(response);
+            },
+            error: function(xhr) {
+                alert('生成报表失败: ' + xhr.responseJSON.detail);
+            }
+        });
+    });
+
+    // 生成利润表
+    $('#incomeStatementForm').on('submit', function(e) {
+        e.preventDefault();
+        const formData = $(this).serialize();
+
+        $.ajax({
+            url: '/api/reports/income-statement/',
+            data: formData,
+            success: function(response) {
+                renderIncomeStatement(response);
+            },
+            error: function(xhr) {
+                alert('生成报表失败: ' + xhr.responseJSON.detail);
+            }
+        });
+    });
+
+    // 生成现金流量表
+    $('#cashFlowForm').on('submit', function(e) {
+        e.preventDefault();
+        const formData = $(this).serialize();
+
+        $.ajax({
+            url: '/api/reports/cash-flow/',
+            data: formData,
+            success: function(response) {
+                renderCashFlow(response);
+            },
+            error: function(xhr) {
+                alert('生成报表失败: ' + xhr.responseJSON.detail);
+            }
+        });
+    });
+
+    // 生成自定义报表
+    $('#customReportForm').on('submit', function(e) {
+        e.preventDefault();
+        const formData = $(this).serialize();
+
+        $.ajax({
+            url: '/api/reports/custom/',
+            method: 'POST',
+            data: formData,
+            success: function(response) {
+                alert('自定义报表已生成');
+                // 这里可以添加显示自定义报表的逻辑
+            },
+            error: function(xhr) {
+                alert('生成报表失败: ' + xhr.responseJSON.detail);
+            }
+        });
+    });
+
+    // 导出Excel
+    $('#exportExcelBtn').on('click', function() {
+        const activeTab = $('#reportTabs .nav-link.active').attr('href');
+        let exportUrl = '';
+
+        if (activeTab === '#balanceSheet') {
+            exportUrl = '/api/reports/balance-sheet/export-excel/?' + $('#balanceSheetForm').serialize();
+        } else if (activeTab === '#incomeStatement') {
+            exportUrl = '/api/reports/income-statement/export-excel/?' + $('#incomeStatementForm').serialize();
+        } else if (activeTab === '#cashFlow') {
+            exportUrl = '/api/reports/cash-flow/export-excel/?' + $('#cashFlowForm').serialize();
+        }
+
+        if (exportUrl) {
+            window.open(exportUrl, '_blank');
+        }
+    });
+
+    // 导出PDF
+    $('#exportPdfBtn').on('click', function() {
+        const activeTab = $('#reportTabs .nav-link.active').attr('href');
+        let exportUrl = '';
+
+        if (activeTab === '#balanceSheet') {
+            exportUrl = '/api/reports/balance-sheet/export-pdf/?' + $('#balanceSheetForm').serialize();
+        } else if (activeTab === '#incomeStatement') {
+            exportUrl = '/api/reports/income-statement/export-pdf/?' + $('#incomeStatementForm').serialize();
+        } else if (activeTab === '#cashFlow') {
+            exportUrl = '/api/reports/cash-flow/export-pdf/?' + $('#cashFlowForm').serialize();
+        }
+
+        if (exportUrl) {
+            window.open(exportUrl, '_blank');
+        }
+    });
+
+    // 渲染资产负债表
+    function renderBalanceSheet(data) {
+        const content = $('#balanceSheetContent');
+        content.empty();
+
+        let html = `
+            <table class="table table-bordered">
+                <thead class="table-light">
+                    <tr>
+                        <th>资产</th>
+                        <th>金额</th>
+                        ${data.compare_date ? '<th>比较金额</th><th>变动</th>' : ''}
+                    </tr>
+                </thead>
+                <tbody>
+        `;
+
+        // 添加资产数据
+        html += '<tr><td colspan="4" class="fw-bold">资产</td></tr>';
+        data.assets.forEach(item => {
+            html += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td class="text-end">${formatCurrency(item.amount)}</td>
+                    ${data.compare_date ? `
+                        <td class="text-end">${formatCurrency(item.compare_amount)}</td>
+                        <td class="text-end ${item.change >= 0 ? 'text-success' : 'text-danger'}">
+                            ${item.change >= 0 ? '+' : ''}${formatCurrency(item.change)} (${item.change_percentage}%)
+                        </td>
+                    ` : ''}
+                </tr>
+            `;
+        });
+
+        // 添加负债和所有者权益数据
+        html += '<tr><td colspan="4" class="fw-bold">负债和所有者权益</td></tr>';
+        data.liabilities.forEach(item => {
+            html += `
+                <tr>
+                    <td>${item.name}</td>
+                    <td class="text-end">${formatCurrency(item.amount)}</td>
+                    ${data.compare_date ? `
+                        <td class="text-end">${formatCurrency(item.compare_amount)}</td>
+                        <td class="text-end ${item.change >= 0 ? 'text-success' : 'text-danger'}">
+                            ${item.change >= 0 ? '+' : ''}${formatCurrency(item.change)} (${item.change_percentage}%)
+                        </td>
+                    ` : ''}
+                </tr>
+            `;
+        });
+
+        html += `
+                </tbody>
+                <tfoot class="table-light">
+                    <tr>
+                        <td class="fw-bold">总资产</td>
+                        <td class="text-end fw-bold">${formatCurrency(data.total_assets)}</td>
+                        ${data.compare_date ? `
+                            <td class="text-end fw-bold">${formatCurrency(data.total_assets_compare)}</td>
+                            <td class="text-end fw-bold ${data.total_assets_change >= 0 ? 'text-success' : 'text-danger'}">
+                                ${data.total_assets_change >= 0 ? '+' : ''}${formatCurrency(data.total_assets_change)} (${data.total_assets_change_percentage}%)
+                            </td>
+                        ` : ''}
+                    </tr>
+                    <tr>
+                        <td class="fw-bold">总负债和所有者权益</td>
+                        <td class="text-end fw-bold">${formatCurrency(data.total_liabilities)}</td>
+                        ${data.compare_date ? `
+                            <td class="text-end fw-bold">${formatCurrency(data.total_liabilities_compare)}</td>
+                            <td class="text-end fw-bold ${data.total_liabilities_change >= 0 ? 'text-success' : 'text-danger'}">
+                                ${data.total_liabilities_change >= 0 ? '+' : ''}${formatCurrency(data.total_liabilities_change)} (${data.total_liabilities_change_percentage}%)
+                            </td>
+                        ` : ''}
+                    </tr>
+                </tfoot>
+            </table>
+        `;
+
+        content.html(html);
+    }
+
+    // 格式化货币显示
+    function formatCurrency(amount) {
+        return '¥' + parseFloat(amount).toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+    }
+});
+</script>
+{% endblock %}
+{% endblock %}

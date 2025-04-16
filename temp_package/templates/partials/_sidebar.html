@@ -1,0 +1,44 @@
+<nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
+    <div class="position-sticky pt-3">
+        <ul class="nav flex-column">
+            <li class="nav-item">
+                <a class="nav-link active" href="{% url 'dashboard' %}">
+                    <span data-feather="home"></span>
+                    仪表盘
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'accounting:list' %}">
+                    <span data-feather="dollar-sign"></span>
+                    账务管理
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'invoice:list' %}">
+                    <span data-feather="file-text"></span>
+                    发票管理
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'budget:list' %}">
+                    <span data-feather="pie-chart"></span>
+                    预算管理
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'report:financial' %}">
+                    <span data-feather="bar-chart-2"></span>
+                    财务报表
+                </a>
+            </li>
+            {% if user.is_superuser %}
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'admin:index' %}">
+                    <span data-feather="settings"></span>
+                    系统管理
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </div>
+</nav>

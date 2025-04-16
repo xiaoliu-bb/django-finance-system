@@ -1,0 +1,103 @@
+{% extends 'base.html' %}
+
+{% block title %}仪表盘 - 财务管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">仪表盘</h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary">分享</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary">导出</button>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card text-white bg-primary mb-3">
+            <div class="card-body">
+                <h5 class="card-title">总收入</h5>
+                <p class="card-text">¥ {{ total_income|default:"0.00" }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-danger mb-3">
+            <div class="card-body">
+                <h5 class="card-title">总支出</h5>
+                <p class="card-text">¥ {{ total_expense|default:"0.00" }}</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-white bg-success mb-3">
+            <div class="card-body">
+                <h5 class="card-title">净收入</h5>
+                <p class="card-text">¥ {{ net_income|default:"0.00" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                收入支出趋势
+            </div>
+            <div class="card-body">
+                <canvas id="incomeExpenseChart" width="100%" height="400"></canvas>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                预算执行情况
+            </div>
+            <div class="card-body">
+                <canvas id="budgetChart" width="100%" height="400"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // 初始化收入支出图表
+    var incomeExpenseCtx = document.getElementById('incomeExpenseChart').getContext('2d');
+    var incomeExpenseChart = new Chart(incomeExpenseCtx, {
+        type: 'line',
+        data: {
+            labels: {{ chart_labels|safe }},
+            datasets: [
+                {
+                    label: '收入',
+                    data: {{ income_data|safe }},
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                },
+                {
+                    label: '支出',
+                    data: {{ expense_data|safe }},
+                    borderColor: 'rgb(255, 99, 132)',
+                    tension: 0.1
+                }
+            ]
+        }
+    });
+
+    // 初始化预算图表
+    var budgetCtx = document.getElementById('budgetChart').getContext('2d');
+    var budgetChart = new Chart(budgetCtx, {
+        type: 'bar',
+        data: {
+            labels: ['预算', '实际'],
+            datasets: {{ budget_data|safe }}
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

@@ -1,0 +1,397 @@
+{% extends 'base.html' %}
+
+{% block title %}系统设置 - 财务管理系统{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">系统设置</h1>
+</div>
+
+<div class="row">
+    <div class="col-md-3">
+        <div class="list-group">
+            <a href="#general" class="list-group-item list-group-item-action active" data-bs-toggle="tab">常规设置</a>
+            <a href="#fiscal" class="list-group-item list-group-item-action" data-bs-toggle="tab">财年设置</a>
+            <a href="#backup" class="list-group-item list-group-item-action" data-bs-toggle="tab">备份恢复</a>
+            <a href="#notifications" class="list-group-item list-group-item-action" data-bs-toggle="tab">通知设置</a>
+        </div>
+    </div>
+    
+    <div class="col-md-9">
+        <div class="tab-content">
+            <!-- 常规设置 -->
+            <div class="tab-pane fade show active" id="general">
+                <div class="card">
+                    <div class="card-header">
+                        常规系统设置
+                    </div>
+                    <div class="card-body">
+                        <form id="generalSettingsForm">
+                            <div class="mb-3">
+                                <label class="form-label">系统名称</label>
+                                <input type="text" class="form-control" name="system_name" value="{{ settings.system_name.value }}">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">默认货币</label>
+                                <select class="form-select" name="default_currency">
+                                    <option value="CNY" {% if settings.default_currency.value == 'CNY' %}selected{% endif %}>人民币 (CNY)</option>
+                                    <option value="USD" {% if settings.default_currency.value == 'USD' %}selected{% endif %}>美元 (USD)</option>
+                                    <option value="EUR" {% if settings.default_currency.value == 'EUR' %}selected{% endif %}>欧元 (EUR)</option>
+                                </select>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">日期格式</label>
+                                <select class="form-select" name="date_format">
+                                    <option value="Y-m-d" {% if settings.date_format.value == 'Y-m-d' %}selected{% endif %}>YYYY-MM-DD</option>
+                                    <option value="d/m/Y" {% if settings.date_format.value == 'd/m/Y' %}selected{% endif %}>DD/MM/YYYY</option>
+                                    <option value="m/d/Y" {% if settings.date_format.value == 'm/d/Y' %}selected{% endif %}>MM/DD/YYYY</option>
+                                </select>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" name="enable_audit" id="enableAudit" {% if settings.enable_audit.value == 'true' %}checked{% endif %}>
+                                <label class="form-check-label" for="enableAudit">启用审计日志</label>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary">保存设置</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 财年设置 -->
+            <div class="tab-pane fade" id="fiscal">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>财年管理</span>
+                        <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addFiscalYearModal">新增财年</button>
+                    </div>
+                    <div class="card-body">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>财年</th>
+                                    <th>开始日期</th>
+                                    <th>结束日期</th>
+                                    <th>状态</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for year in fiscal_years %}
+                                <tr>
+                                    <td>{{ year.year }}</td>
+                                    <td>{{ year.start_date|date:"Y-m-d" }}</td>
+                                    <td>{{ year.end_date|date:"Y-m-d" }}</td>
+                                    <td>
+                                        <span class="badge bg-{% if year.is_current %}success{% else %}secondary{% endif %}">
+                                            {% if year.is_current %}当前财年{% else %}历史财年{% endif %}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if not year.is_current %}
+                                        <button class="btn btn-sm btn-outline-primary set-current" data-year-id="{{ year.id }}">设为当前</button>
+                                        {% endif %}
+                                        <button class="btn btn-sm btn-outline-danger delete-year" data-year-id="{{ year.id }}">删除</button>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 备份恢复 -->
+            <div class="tab-pane fade" id="backup">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                数据备份
+                            </div>
+                            <div class="card-body">
+                                <p class="card-text">手动创建系统数据备份</p>
+                                <button id="backupBtn" class="btn btn-primary">立即备份</button>
+                                <div class="mt-3" id="backupProgress" style="display: none;">
+                                    <div class="progress">
+                                        <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+                                    </div>
+                                    <p class="text-muted mt-2">正在备份数据，请稍候...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header">
+                                数据恢复
+                            </div>
+                            <div class="card-body">
+                                <form id="restoreForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">选择备份文件</label>
+                                        <select class="form-select" name="backup_file" required>
+                                            <option value="">-- 选择备份文件 --</option>
+                                            {% for backup in backups %}
+                                            <option value="{{ backup.filename }}">{{ backup.created_at|date:"Y-m-d H:i" }} ({{ backup.size }})</option>
+                                            {% endfor %}
+                                        </select>
+                                    </div>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="checkbox" name="confirm_restore" id="confirmRestore" required>
+                                        <label class="form-check-label" for="confirmRestore">我确认要恢复此备份，这将覆盖当前数据</label>
+                                    </div>
+                                    <button type="submit" class="btn btn-warning">恢复数据</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 通知设置 -->
+            <div class="tab-pane fade" id="notifications">
+                <div class="card">
+                    <div class="card-header">
+                        通知与提醒设置
+                    </div>
+                    <div class="card-body">
+                        <form id="notificationSettingsForm">
+                            <div class="mb-3">
+                                <label class="form-label">预算超支提醒</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" name="budget_alert_threshold" value="{{ settings.budget_alert_threshold.value }}">
+                                    <span class="input-group-text">%</span>
+                                </div>
+                                <small class="text-muted">当预算使用率达到此百分比时发送提醒</small>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">发票到期提醒</label>
+                                <div class="input-group">
+                                    <input type="number" class="form-control" name="invoice_due_alert_days" value="{{ settings.invoice_due_alert_days.value }}">
+                                    <span class="input-group-text">天前</span>
+                                </div>
+                                <small class="text-muted">在发票到期前多少天发送提醒</small>
+                            </div>
+                            <div class="mb-3 form-check">
+                                <input type="checkbox" class="form-check-input" name="enable_email_notifications" id="enableEmailNotifications" {% if settings.enable_email_notifications.value == 'true' %}checked{% endif %}>
+                                <label class="form-check-label" for="enableEmailNotifications">启用邮件通知</label>
+                            </div>
+                            <div id="emailSettings" {% if settings.enable_email_notifications.value != 'true' %}style="display: none;"{% endif %}>
+                                <div class="mb-3">
+                                    <label class="form-label">SMTP服务器</label>
+                                    <input type="text" class="form-control" name="smtp_server" value="{{ settings.smtp_server.value }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">SMTP端口</label>
+                                    <input type="number" class="form-control" name="smtp_port" value="{{ settings.smtp_port.value }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">发件人邮箱</label>
+                                    <input type="email" class="form-control" name="email_from" value="{{ settings.email_from.value }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">SMTP用户名</label>
+                                    <input type="text" class="form-control" name="smtp_username" value="{{ settings.smtp_username.value }}">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">SMTP密码</label>
+                                    <input type="password" class="form-control" name="smtp_password" placeholder="输入密码保持不变">
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <button type="submit" class="btn btn-primary">保存设置</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block extra_js %}
+```javascript file.js
+$(document).ready(function() {
+    // 显示/隐藏邮件设置
+    $('#enableEmailNotifications').on('change', function() {
+        if ($(this).is(':checked')) {
+            $('#emailSettings').show();
+        } else {
+            $('#emailSettings').hide();
+        }
+    });
+
+    // 保存常规设置
+    $('#generalSettingsForm').on('submit', function(e) {
+        e.preventDefault();
+        const formData = $(this).serialize();
+
+        $.ajax({
+            url: '/api/system-settings/general/',
+            method: 'POST',
+            data: formData,
+            success: function() {
+                alert('常规设置已保存');
+            },
+            error: function(xhr) {
+                alert('保存失败: ' + xhr.responseJSON.detail);
+            }
+        });
+    });
+
+    // 保存通知设置
+    $('#notificationSettingsForm').on('submit', function(e) {
+        e.preventDefault();
+        const formData = $(this).serialize();
+
+        $.ajax({
+            url: '/api/system-settings/notifications/',
+            method: 'POST',
+            data: formData,
+            success: function() {
+                alert('通知设置已保存');
+            },
+            error: function(xhr) {
+                alert('保存失败: ' + xhr.responseJSON.detail);
+            }
+        });
+    });
+
+    // 设置当前财年
+    $(document).on('click', '.set-current', function() {
+        const yearId = $(this).data('year-id');
+
+        if (confirm('确定要将此财年设为当前财年吗？')) {
+            $.ajax({
+                url: '/api/fiscal-years/' + yearId + '/set_current/',
+                method: 'POST',
+                success: function() {
+                    location.reload();
+                },
+                error: function(xhr) {
+                    alert('操作失败: ' + xhr.responseJSON.detail);
+                }
+            });
+        }
+    });
+
+    // 删除财年
+    $(document).on('click', '.delete-year', function() {
+        const yearId = $(this).data('year-id');
+
+        if (confirm('确定要删除此财年吗？此操作不可恢复！')) {
+            $.ajax({
+                url: '/api/fiscal-years/' + yearId + '/',
+                method: 'DELETE',
+                success: function() {
+                    location.reload();
+                },
+                error: function(xhr) {
+                    alert('删除失败: ' + xhr.responseJSON.detail);
+                }
+            });
+        }
+    });
+
+    // 执行备份
+    $('#backupBtn').on('click', function() {
+        $('#backupProgress').show();
+
+        $.ajax({
+            url: '/api/system/backup/',
+            method: 'POST',
+            success: function(response) {
+                $('#backupProgress').hide();
+                alert('备份成功创建: ' + response.filename);
+                location.reload();
+            },
+            error: function(xhr) {
+                $('#backupProgress').hide();
+                alert('备份失败: ' + xhr.responseJSON.detail);
+            }
+        });
+    });
+
+    // 执行恢复
+    $('#restoreForm').on('submit', function(e) {
+        e.preventDefault();
+
+        if (confirm('确定要恢复此备份吗？当前所有数据将被覆盖！')) {
+            const formData = $(this).serialize();
+
+            $.ajax({
+                url: '/api/system/restore/',
+                method: 'POST',
+                data: formData,
+                success: function() {
+                    alert('数据恢复成功，系统将重新加载');
+                    location.reload();
+                },
+                error: function(xhr) {
+                    alert('恢复失败: ' + xhr.responseJSON.detail);
+                }
+            });
+        }
+    });
+});
+{% endblock %}
+
+<!-- 新增财年模态框 -->
+<div class="modal fade" id="addFiscalYearModal" tabindex="-1" aria-labelledby="addFiscalYearModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addFiscalYearModalLabel">新增财年</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="addFiscalYearForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">财年</label>
+                        <input type="number" class="form-control" name="year" min="2000" max="2100" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">开始日期</label>
+                        <input type="date" class="form-control" name="start_date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">结束日期</label>
+                        <input type="date" class="form-control" name="end_date" required>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_current" id="isCurrent">
+                        <label class="form-check-label" for="isCurrent">设为当前财年</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// 新增财年表单提交
+$('#addFiscalYearForm').on('submit', function(e) {
+    e.preventDefault();
+    const formData = $(this).serialize();
+
+    $.ajax({
+        url: '/api/fiscal-years/',
+        method: 'POST',
+        data: formData,
+        success: function() {
+            $('#addFiscalYearModal').modal('hide');
+            location.reload();
+        },
+        error: function(xhr) {
+            alert('添加失败: ' + xhr.responseJSON.detail);
+        }
+    });
+});
+</script>
+{% endblock %}
